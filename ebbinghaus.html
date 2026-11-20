@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>艾宾浩斯 · 记忆复习提醒</title>
+    <style>
+        * { box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; }
+        body { background: #f4f7fc; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 16px; }
+        .app { max-width: 1100px; width: 100%; background: white; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,20,40,0.12); padding: 20px 16px 28px; }
+        h1 { font-size: 1.5rem; font-weight: 600; display: flex; align-items: center; gap: 8px; color: #1e2b3c; margin-bottom: 8px; flex-wrap: wrap; }
+        h1 span { background: #e6edf6; padding: 3px 10px; border-radius: 100px; font-size: 0.75rem; font-weight: 400; color: #2c577c; }
+        .subhead { color: #5b6f84; margin-bottom: 20px; border-left: 4px solid #3b82f6; padding-left: 12px; font-size: 0.9rem; }
+        .notify-bar { background: #fffbeb; border: 1px solid #fde68a; border-radius: 16px; padding: 12px 16px; margin-bottom: 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; font-size: 0.85rem; color: #92400e; }
+        .notify-bar.on { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+        .btn-notify { background: #1e2b3c; color: white; border: none; padding: 10px 18px; border-radius: 40px; font-weight: 600; font-size: 0.85rem; cursor: pointer; white-space: nowrap; }
+        .btn-notify:disabled { background: #94a3b8; cursor: default; }
+        .input-panel { background: #f9fcff; border: 1px solid #d9e5f0; border-radius: 20px; padding: 16px; margin-bottom: 24px; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+        .field { flex: 1 1 200px; display: flex; flex-direction: column; gap: 6px; }
+        .field label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #3e5b77; }
+        .field input { padding: 12px 16px; border-radius: 40px; border: 1px solid #cbdae8; background: white; font-size: 1rem; outline: none; }
+        .field input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+        .btn-primary { background: #1e2b3c; color: white; border: none; padding: 12px 24px; border-radius: 40px; font-weight: 600; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; height: 48px; }
+        .btn-primary:hover { background: #2f3f55; }
+        .reminder-badge { background: #ffedd5; color: #b45309; border-radius: 100px; padding: 2px 10px; font-size: 0.75rem; font-weight: 600; }
+        .section-title { display: flex; align-items: center; justify-content: space-between; margin: 20px 0 14px; flex-wrap: wrap; gap: 8px; }
+        .section-title h2 { font-size: 1.15rem; font-weight: 600; color: #1e2b3c; display: flex; align-items: center; gap: 8px; }
+        .task-grid { display: flex; flex-direction: column; gap: 12px; max-height: 500px; overflow-y: auto; padding-right: 4px; }
+        .task-card { background: white; border: 1px solid #e2eaf2; border-radius: 18px; padding: 14px 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+        .task-info { flex: 2 1 220px; }
+        .task-title { font-weight: 600; font-size: 1rem; color: #0f1e2e; margin-bottom: 6px; word-break: break-word; }
+        .task-meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.75rem; color: #5e7186; }
+        .review-slots { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #d7e2ed; flex: 1 1 100%; }
+        .slot { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; background: #f1f6fc; padding: 5px 10px; border-radius: 30px; }
+        .slot .date { font-weight: 500; color: #1a3c5e; }
+        .slot .done-badge { background: #22c55e; color: white; font-size: 0.65rem; padding: 2px 7px; border-radius: 100px; font-weight: 600; }
+        .slot .pending-badge { background: #f97316; color: white; font-size: 0.65rem; padding: 2px 7px; border-radius: 100px; font-weight: 600; }
+        .slot .missed-badge { background: #ef4444; color: white; font-size: 0.65rem; padding: 2px 7px; border-radius: 100px; font-weight: 600; }
+        .task-actions { display: flex; gap: 8px; margin-left: auto; flex-shrink: 0; flex-wrap: wrap; }
+        .btn-icon { background: white; border: 1px solid #cbdae8; border-radius: 30px; padding: 7px 14px; font-size: 0.75rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; color: #2e4a66; white-space: nowrap; }
+        .btn-icon:hover { background: #eef4fa; }
+        .btn-icon.review-btn { background: #e6f0ff; border-color: #b8d2f0; color: #1a5a9c; }
+        .btn-icon.delete-btn { color: #b91c1c; border-color: #f3cdcd; }
+        .empty-state { text-align: center; padding: 40px 20px; background: #f9fcff; border-radius: 24px; border: 1px dashed #bdd3e9; color: #5b7a9a; font-size: 0.95rem; }
+        .footer-note { margin-top: 20px; font-size: 0.75rem; color: #7d95ad; text-align: center; border-top: 1px solid #e2ebf3; padding-top: 16px; }
+        .notification-area { position: fixed; top: 16px; right: 16px; left: 16px; z-index: 999; display: flex; flex-direction: column; gap: 10px; max-width: 380px; margin-left: auto; }
+        .toast { background: #1e2b3c; color: white; padding: 14px 18px; border-radius: 40px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); font-size: 0.85rem; display: flex; align-items: center; gap: 10px; animation: slideIn 0.2s ease; }
+        .toast.reminder { background: #b45309; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+        @media (max-width: 480px) {
+            .app { padding: 16px 12px 24px; }
+            h1 { font-size: 1.3rem; }
+            .task-actions { margin-left: 0; width: 100%; justify-content: flex-end; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <h1>
+        🧠 艾宾浩斯记忆曲线
+        <span>复习提醒</span>
+    </h1>
+    <div class="subhead">
+        输入今天完成的学习任务，系统会在 1天、2天、4天、7天、15天 后提醒你复习
+    </div>
+
+    <!-- 通知授权栏 -->
+    <div class="notify-bar" id="notifyBar">
+        <span id="notifyText">🔕 浏览器通知未开启（打开页面时才会检查提醒）</span>
+        <button class="btn-notify" id="enableNotifyBtn">开启通知</button>
+    </div>
+
+    <!-- 输入区 -->
+    <div class="input-panel">
+        <div class="field">
+            <label>📚 学习任务</label>
+            <input type="text" id="taskInput" placeholder="例如：背诵 unit 5 单词" maxlength="80">
+        </div>
+        <div class="field" style="flex: 0 1 150px;">
+            <label>📅 完成日期</label>
+            <input type="date" id="dateInput">
+        </div>
+        <button class="btn-primary" id="addTaskBtn">➕ 添加任务</button>
+    </div>
+
+    <div class="section-title">
+        <h2>📋 我的学习任务 <span class="reminder-badge" id="taskCount">0</span></h2>
+        <button class="btn-icon" id="refreshRemindersBtn" title="检查并推送提醒">🔔 检查提醒</button>
+    </div>
+
+    <div id="taskListContainer" class="task-grid"></div>
+    <div class="footer-note">
+        ⏰ 复习节点：1天 · 2天 · 4天 · 7天 · 15天（基于完成日期）
+    </div>
+</div>
+
+<div id="toastContainer" class="notification-area"></div>
+
+<script>
+(function() {
+    const STORAGE_KEY = 'ebbinghaus_tasks_v1';
+    const INTERVALS = [1, 2, 4, 7, 15];
+
+    // ---------- 工具函数 ----------
+    function loadTasks() {
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+        catch(e) { return []; }
+    }
+    function saveTasks(tasks) { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); }
+
+    function formatDate(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth()+1).padStart(2,'0');
+        const day = String(d.getDate()).padStart(2,'0');
+        return `${y}-${m}-${day}`;
+    }
+    function parseDate(s) {
+        const [y,m,d] = s.split('-').map(Number);
+        return new Date(y, m-1, d);
+    }
+    function daysBetween(a, b) {
+        return Math.round((parseDate(b) - parseDate(a)) / 86400000);
+    }
+    function todayStr() { return formatDate(new Date()); }
+
+    function getReviewDates(completedDateStr) {
+        const base = parseDate(completedDateStr);
+        return INTERVALS.map(n => {
+            const d = new Date(base);
+            d.setDate(d.getDate() + n);
+            return formatDate(d);
+        });
+    }
+
+    function isOverdue(dateStr) { return daysBetween(dateStr, todayStr()) > 0; }
+    function isToday(dateStr) { return dateStr === todayStr(); }
+
+    function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+    // ---------- 通知模块 ----------
+    let notificationGranted = false;
+
+    function updateNotifyBar() {
+        const bar = document.getElementById('notifyBar');
+        const txt = document.getElementById('notifyText');
+        const btn = document.getElementById('enableNotifyBtn');
+
+        if (!('Notification' in window)) {
+            bar.classList.remove('on');
+            txt.textContent = '⚠️ 当前浏览器不支持系统通知，只能使用页面内提醒';
+            btn.disabled = true;
+            btn.textContent = '不支持';
+            return;
+        }
+
+        if (Notification.permission === 'granted') {
+            notificationGranted = true;
+            bar.classList.add('on');
+            txt.textContent = '✅ 通知已开启，打开页面时会自动推送复习提醒';
+            btn.disabled = true;
+            btn.textContent = '已开启';
+        } else if (Notification.permission === 'denied') {
+            notificationGranted = false;
+            bar.classList.remove('on');
+            txt.textContent = '🚫 通知被拒绝，请到浏览器设置里手动允许本站通知';
+            btn.disabled = true;
+            btn.textContent = '已拒绝';
+        } else {
+            notificationGranted = false;
+            bar.classList.remove('on');
+            txt.text
